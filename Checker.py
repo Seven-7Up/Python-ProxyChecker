@@ -9,7 +9,7 @@ def check(proxy):
         'User-Agent':'Mozilla/5.0 (X11; Win64 x64; rv:86.0) Gecko/20100101 Firefox/86.0',
         }
     r = requests.get('https://httpbin.org/ip', headers=headers, proxies={'http': 'http://' + proxy, 'https': 'https://' + proxy}, timeout=7)
-    print(r.status_code)
+    print(r.json(), ':', r.status_code)
     file_with_goods = open('good.txt','a')
     file_with_goods.write(proxy)
 
