@@ -150,7 +150,7 @@ def print_help():
         "%sUsage: %s [-h, --help] [-v, --verbose] [-p, --proxy proxy] [-f, --proxyfile filename] [-o, --outfile filename]\n\n"
         "  -h, --help               : print help (current message)\n"
         "  -v, --verbose            : turn verbosity on\n"
-        "  -p, --proxy     proxies  : check this proxies (separeted by comma `,`)\n"
+        "  -p, --proxy     proxies  : check this proxies (separeted by comma ',')\n"
         "  -f, --proxyfile filename : read this file and check her proxies (seperated by newline)\n"
         "  -o, --outfile   filename : write the good proxies and there info to the file"
         % (blue, argv[0])
@@ -163,10 +163,12 @@ arguments = ["-h", "--help", "-v", "--verbose", "-o",
              "--output", "-p", "--proxy", "-f", "--proxyfile"]
 output_file = "working_proxies.txt"
 
+
+if len(argv) <= 1:
+    print_help()
+
 arg_index = 1
 while arg_index < len(argv):
-    if len(argv) == 1:
-        print_help()
     if argv[arg_index] in arguments:
         if argv[arg_index] in arguments[0: 2]:
             print_help()
