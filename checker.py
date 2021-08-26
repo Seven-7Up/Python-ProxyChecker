@@ -52,7 +52,6 @@ def send_requests(proxy=None, url=None, verbose=False):
             session.setopt(session.URL, proxy_judges["http"])
             session.perform()
     except Exception as e:
-        # print(e)
         return False
 
     # Return False if the status is not 200
@@ -113,7 +112,7 @@ def check(proxy, verbose):
     protocols = {}
     timeout = 0
 
-    for protocol in ["http", "https", "socks4", "socks5"]:
+    for protocol in ["http", "socks4", "socks5"]:
         debug(f"Trying {protocol=}", verbose)
         res = send_requests(proxy=protocol + "://" + proxy, verbose=verbose)
 
@@ -141,6 +140,7 @@ def check(proxy, verbose):
         "ssl_support": ssl_support,
         "protocols": list(protocols.keys()),
         "anonymity": anonymity,
+        "country": country,
         "timeout": timeout
     }
 
@@ -158,9 +158,12 @@ def print_help():
     exit(0)
 
 
-verbose = False
 arguments = ["-h", "--help", "-v", "--verbose", "-o",
              "--output", "-p", "--proxy", "-f", "--proxyfile"]
+
+verbose = False
+check_proxies_line = False
+check_proxies_file = False
 output_file = "working_proxies.txt"
 
 
@@ -177,33 +180,15 @@ while arg_index < len(argv):
             debug(f"{verbose=}", verbose)
         elif argv[arg_index] in arguments[4: 6]:
             output_file = argv[arg_index+1]
+            arg_index += 1
         elif argv[arg_index] in arguments[6: 8]:
-            for current_proxy in argv[arg_index+1].split(","):
-                print("%sCheking %s proxy!" % (blue, current_proxy))
-                if current_proxy == "":
-                    break
-                infos = check(current_proxy, verbose=verbose)
-                if infos:
-                    print("%s%s : %s" % (green, current_proxy, infos))
-                    open(output_file, "a").write(
-                        "%s : %s\n" % (current_proxy, infos))
-                else:
-                    print("%sProxy %s is not working!" % (red, current_proxy))
-            arg_index += 2
+            check_proxies_line = True
+            proxies = argv[arg_index+1]
+            arg_index += 1
         elif argv[arg_index] in arguments[8: 10]:
-            for current_proxy in [i.rstrip() for i in open(argv[arg_index+1], "r").readlines()]:
-                signal.signal(signal.SIGINT, lambda s, f: exit(0))
-                print("%sCheking %s proxy!" % (blue, current_proxy))
-                if current_proxy == "":
-                    break
-                infos = check(current_proxy, verbose=verbose)
-                if infos:
-                    print("%s%s : %s" % (green, current_proxy, infos))
-                    open(output_file, "a").write(
-                        "%s : %s\n" % (current_proxy, infos))
-                else:
-                    print("%sProxy %s is not working!" % (red, current_proxy))
-            arg_index += 2
+            check_proxies_file = True
+            proxies_file = argv[arg_index+1]
+            arg_index += 1
     else:
         print("%s%s %s is unknown!\n"
               "run %s --help to print infos"
@@ -212,3 +197,28 @@ while arg_index < len(argv):
         exit(1)
 
     arg_index += 1
+
+if check_proxies_line:
+    for current_proxy in proxies.split(","):
+        print("%sCheking %s proxy!" % (blue, current_proxy))
+        if current_proxy == "":
+            break
+        infos = check(current_proxy, verbose=verbose)
+        if infos:
+            print("%s%s : %s" % (green, current_proxy, infos))
+            open(output_file, "a").write("%s : %s\n" % (current_proxy, infos))
+        else:
+            print("%sProxy %s is not working!" % (red, current_proxy))
+
+if check_proxies_file:
+    for current_proxy in [i.rstrip() for i in open(proxies_file, "r").readlines()]:
+        signal.signal(signal.SIGINT, lambda s, f: exit(0))
+        print("%sCheking %s proxy!" % (blue, current_proxy))
+        if current_proxy == "":
+            break
+        infos = check(current_proxy, verbose=verbose)
+        if infos:
+            print("%s%s : %s" % (green, current_proxy, infos))
+            open(output_file, "a").write("%s : %s\n" % (current_proxy, infos))
+        else:
+            print("%sProxy %s is not working!" % (red, current_proxy))

@@ -2,6 +2,9 @@
 
 ## About:
 
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/3?style=flat-square)
+![GitHub branch checks state](https://img.shields.io/github/checks-status/Seven-7Up/python-proxyChecker/master?color=green&logo=master&style=flat-square)
+
 ![ScreenShot](Screenshot_2021-08-25_16-47-11.png)
 
 Python proxy checker script, using pycurl, colorama and [ricerati/proxy-checker-python](https://github.com/ricerati/proxy-checker-python/) project.
