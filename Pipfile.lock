@@ -1,15 +1,29 @@
-[[source]] # Here goes your package sources (where you are downloading your packages from).
-url = "https://pypi.python.org/simple"
-verify_ssl = true
-name = "pypi"
-
-[packages] # Here goes your package requirements for running the application and its versions (which packages you will use when running the application).
-pycurl = "*"
-colorama = "*"
-
-# [dev-packages] # Here goes your package requirements for developing the application and its versions (which packages you will use when developing the application)
-# pylint = "*"
-# wheel = "*"
-
-[requires] # Here goes your required Python version.
-python_version = "3.9"
+{
+    "_meta": {
+        "hash": {
+            "sha256": "bf11a5021c6abce06f7e14c4febdbb8be23bd364ed0939c4dd8ea91ce83c2db5"
+        },
+        "pipfile-spec": 6,
+        "requires": {
+            "python_version": "3.9"
+        },
+        "sources": [
+            {
+                "name": "pypi",
+                "url": "https://pypi.org/simple",
+                "verify_ssl": true
+            }
+        ]
+    },
+    "default": {
+        "colorama": {
+            "hashes": [
+                "sha256:5941b2b48a20143d2267e95b1c2a7603ce057ee39fd88e7329b0c292aa16869b",
+                "sha256:9f47eda37229f68eee03b24b9748937c7dc3868f906e8ba69fbcbdd3bc5dc3e2"
+            ],
+            "index": "pypi",
+            "version": "==0.4.4"
+        }
+    },
+    "develop": {}
+}
