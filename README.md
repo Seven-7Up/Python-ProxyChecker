@@ -1,14 +1,14 @@
 # Python-ProxyChecker
 
+#### TODO:
+
+Add get_proxies function from [proxyscan api](https://www.proxyscan.io/api), with proxies numbers option and check them.
+
 ## About:
 
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/3?style=flat-square)
 ![GitHub Pipenv locked Python version](https://img.shields.io/github/pipenv/locked/python-version/Seven-7Up/python-proxyChecker?style=flat-square)
 ![GitHub branch checks state](https://img.shields.io/github/checks-status/Seven-7Up/python-proxyChecker/master?color=green&logo=master&style=flat-square)
-
-#### TODO:
-
-Add get_proxies function from [proxyscan api](https://www.proxyscan.io/api), with proxies numbers option and check them.
 
 ![ScreenShot](ScreenShot/Screenshot_2021-08-25_16-47-11.png)
 ![ScreenShot](ScreenShot/Screenshot_2021-08-27_06-47-16.png)
