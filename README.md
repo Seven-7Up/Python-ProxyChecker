@@ -24,16 +24,16 @@ git clone https://github.com/Seven-7Up/python-proxyChecker.git
 
 OR download it as [tarrbal](https://github.com/Seven-7Up/python-proxyChecker/archive/master.tar.gz) or for [zip](https://github.com/Seven-7Up/python-proxyChecker/archive/master.zip)
 
-run
+run pip command:
 
 ```
 pip install -r requirements.txt
 ```
 
-or
+or pip env command:
 
 ```
-pip install colorama
+pipenv install
 ```
 
 to install [`colorama`](https://github.com/tartley/colorama).

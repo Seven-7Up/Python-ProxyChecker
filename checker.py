@@ -6,11 +6,13 @@ import random
 from sys import argv
 from colorama import Fore
 import json
+import signal
 
 
 proxy_judges = {
     "https": "https://httpbin.org/get",
-    "http": "http://httpbin.org/get"
+    "http": "http://httpbin.org/get",
+    "php_http": "http://mojeip.net.pl/asdfa/azenv.php"
 }
 
 ### Colors ########################################
@@ -27,7 +29,7 @@ def debug(string: str, verbose):
         print("%sDEBUG: %s%s" % (magenta, reset, string), flush=True)
 
 
-def send_requests(proxy=None, url=None, verbose=False):
+def send_requests(proxy=None, url=None, verbose=False, force_ssl=False):
     session = pycurl.Curl()
     response = BytesIO()
     ssl_support = False
@@ -39,19 +41,40 @@ def send_requests(proxy=None, url=None, verbose=False):
     if proxy:
         session.setopt(session.PROXY, proxy)
 
-    try:
+    if force_ssl:
         try:
             session.setopt(session.SSL_VERIFYHOST, 0)
             session.setopt(session.SSL_VERIFYPEER, 0)
             session.setopt(session.URL, url or proxy_judges["https"])
             session.perform()
             ssl_support = True
-            debug(f"{ssl_support=}", verbose)
+            debug(f"https url worked!", verbose)
+            debug(f"{ssl_support=}", verbose=verbose)
         except:
-            session.setopt(session.URL, proxy_judges["http"])
-            session.perform()
-    except:
-        return False
+            debug(f"https failed!", verbose=verbose)
+            return False
+    else:
+        try:
+            try:
+                try:
+                    session.setopt(session.SSL_VERIFYHOST, 0)
+                    session.setopt(session.SSL_VERIFYPEER, 0)
+                    session.setopt(session.URL, url or proxy_judges["https"])
+                    session.perform()
+                    ssl_support = True
+                    debug(f"https url worked!", verbose)
+                    debug(f"{ssl_support=}", verbose=verbose)
+                except:
+                    debug(f"https failed!", verbose=verbose)
+                    session.setopt(session.URL, url or proxy_judges["http"])
+                    session.perform()
+            except:
+                debug(f"http url failed for unknown error!", verbose=verbose)
+                debug("Trying a nother website!", verbose=verbose)
+                session.setopt(session.URL, proxy_judges["php_http"])
+                session.perform()
+        except:
+            return False
 
     # Return False if the status is not 200
     if session.getinfo(session.HTTP_CODE) != 200:
@@ -80,6 +103,9 @@ self_ip = get_ip()
 
 
 def check_anonymity(response):
+    if self_ip in response:
+        return "Transparent"
+
     privacy_headers = [
         "VIA",
         "X-FORWARDED-FOR",
@@ -113,23 +139,21 @@ def check(proxy, in_check_protocols: list, verbose, force_ssl):
 
     for protocol in in_check_protocols:
         debug(f"Trying {protocol=}", verbose)
-        res = send_requests(proxy=protocol + "://" + proxy, verbose=verbose)
+        res = send_requests(proxy=protocol + "://" + proxy, verbose=verbose, force_ssl=force_ssl)
 
         # Check if the request failed
         if not res:
             continue
 
         ssl_support = res["ssl_support"]
-        if force_ssl and ssl_support:
-            pass
-        else:
+        if force_ssl and not ssl_support:
             debug(f"Failed: cause {ssl_support=}", verbose=verbose)
             continue
 
 
         protocols[protocol] = res
         timeout += res["timeout"]
-        debug(f"{protocol} is working!", verbose)
+        debug(f"{protocol.upper()} protocol is working!", verbose)
 
     if (len(protocols) == 0):
         return False
@@ -139,11 +163,18 @@ def check(proxy, in_check_protocols: list, verbose, force_ssl):
     ssl_support = protocols[random_protocol]["ssl_support"]
 
     country = get_country(proxy.split(":")[0])
-    anonymity = check_anonymity(r)
+    anon_r = send_requests(url=proxy_judges["php_http"])
+    anonymity = check_anonymity(anon_r)
     timeout = timeout // len(protocols)
 
+    try:
+        proxy_address = json.loads(r)["origin"]
+    except:
+        l = [i.split(" = ") for i in r.split("\n") if not i == ""]
+        proxy_address = {l[i][0]: l[i][1] for i in range(0, len(l), 2)}["REMOTE_ADDR"]
+
     return {
-        "proxy_address": json.loads(r)["origin"],
+        "proxy_address": proxy_address,
         "ssl_support": ssl_support,
         "protocols": list(protocols.keys()),
         "anonymity": anonymity,
@@ -207,6 +238,8 @@ in_check_protocols = ["http", "socks4", "socks5"]
 if len(argv) <= 1:
     print_help()
 
+signal.signal(signal.SIGINT, lambda s,f: exit(0))
+
 arg_index = 1
 while arg_index < len(argv):
     if argv[arg_index] in arguments:
@@ -238,10 +271,8 @@ while arg_index < len(argv):
             arg_index += 1
         elif argv[arg_index] == arguments[11]:
             force_ssl_suport = True
-            debug(f"{force_ssl_suport=}", verbose=verbose)
         elif argv[arg_index] == arguments[12]:
             generate_proxychains_file = True
-            debug(f"{generate_proxychains_file=}", verbose=verbose)
         arg_index += 1
     else:
         print("%s%s %s is unknown!\n"
@@ -249,8 +280,11 @@ while arg_index < len(argv):
               % (red, argv[0], argv[arg_index], argv[0]))
         exit(1)
 
+open(output_file, "w").close()
+debug(f"{force_ssl_suport=}", verbose=verbose)
 
 if generate_proxychains_file:
+    debug(f"{generate_proxychains_file=}", verbose=verbose)
     generate_proxychains()
 
 if check_proxies_line:
@@ -260,10 +294,11 @@ if check_proxies_line:
         infos = check(current_proxy, in_check_protocols, verbose=verbose, force_ssl=force_ssl_suport)
         if infos:
             print("%s%s : %s" % (green, current_proxy, infos))
-            open(output_file, "a").write("%s : %s\n" % (current_proxy, infos))
-            if generate_proxychains_file:
-                generate_proxychains(current_proxy, random.choice(
-                    ["socks5" if "socks5" in infos["protocols"] else "socks4" if "socks4" in infos["protocols"] else infos["protocols"]])[0])
+            if current_proxy not in open(output_file, "r").read():
+                open(output_file, "a").write("%s : %s\n" % (current_proxy, infos))
+                if generate_proxychains_file:
+                    generate_proxychains(current_proxy, random.choice(
+                        ["socks5" if "socks5" in infos["protocols"] else "socks4" if "socks4" in infos["protocols"] else infos["protocols"]])[0])
         else:
             print("%sProxy %s is not working!" % (red, current_proxy))
 
@@ -274,11 +309,11 @@ if check_proxies_file:
         infos = check(current_proxy, in_check_protocols, verbose=verbose, force_ssl=force_ssl_suport)
         if infos:
             print("%s%s : %s" % (green, current_proxy, infos))
-            open(output_file, "a").write("%s : %s\n" % (current_proxy, infos))
-            if generate_proxychains_file:
-                generate_proxychains(current_proxy, random.choice(
-                    ["socks5" if "socks5" in infos["protocols"] else "socks4" if "socks4" in infos["protocols"] else infos["protocols"]])[0])
-
+            if current_proxy not in open(output_file, "r").read():
+                open(output_file, "a").write("%s : %s\n" % (current_proxy, infos))
+                if generate_proxychains_file:
+                    generate_proxychains(current_proxy, random.choice(
+                        ["socks5" if "socks5" in infos["protocols"] else "socks4" if "socks4" in infos["protocols"] else infos["protocols"]])[0])
         else:
             print("%sProxy %s is not working!" % (red, current_proxy))
 
