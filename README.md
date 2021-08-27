@@ -6,7 +6,9 @@
 ![GitHub Pipenv locked Python version](https://img.shields.io/github/pipenv/locked/python-version/Seven-7Up/python-proxyChecker?style=flat-square)
 ![GitHub branch checks state](https://img.shields.io/github/checks-status/Seven-7Up/python-proxyChecker/master?color=green&logo=master&style=flat-square)
 
-![ScreenShot](Screenshot_2021-08-25_16-47-11.png)
+![ScreenShot](ScreenShot/Screenshot_2021-08-25_16-47-11.png)
+![ScreenShot](ScreenShot/Screenshot_2021-08-27_06-47-16.png)
+![ScreenShot](ScreenShot/Screenshot_2021-08-27_06-57-00.png)
 
 Python proxy checker script, using pycurl, colorama and [ricerati/proxy-checker-python](https://github.com/ricerati/proxy-checker-python/) project.
 
@@ -52,6 +54,19 @@ For help, use:
 
 ```
 ./checker --help
+```
+
+```
+Usage: ./checker.py [-h, --help] [-v, --verbose] [-p, --proxy proxy] [-f, --proxyfile filename] [-o, --outfile filename]
+
+  -h, --help                 : print help (current message)
+  -v, --verbose              : turn verbosity on
+  -p, --proxy       proxies  : check this proxies (separeted by comma ',')
+  -f, --proxyfile   filename : read this file and check her proxies (seperated by newline)
+  -o, --outfile     filename : write the good proxies and there info to the file (default: working_proxies.txt)
+  --protocols                : choose the right protocol for this proxies (default: http, socks4, socks5)
+  --force-ssl                : force ssl support as codition to accept any proxy
+  --gen-proxychains          : generate proxychains.conf for proxychains binary (see https://github.com/haad/proxychains)
 ```
 
 Basic usage:
