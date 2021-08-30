@@ -37,7 +37,6 @@ def send_requests(proxy=None, url=None, verbose=False, force_ssl=False):
     session.setopt(session.WRITEDATA, response)
     session.setopt(session.TIMEOUT, 5)
 
-
     if proxy:
         session.setopt(session.PROXY, proxy)
 
@@ -139,7 +138,8 @@ def check(proxy, in_check_protocols: list, verbose, force_ssl):
 
     for protocol in in_check_protocols:
         debug(f"Trying {protocol=}", verbose)
-        res = send_requests(proxy=protocol + "://" + proxy, verbose=verbose, force_ssl=force_ssl)
+        res = send_requests(proxy=protocol + "://" + proxy,
+                            verbose=verbose, force_ssl=force_ssl)
 
         # Check if the request failed
         if not res:
@@ -149,7 +149,6 @@ def check(proxy, in_check_protocols: list, verbose, force_ssl):
         if force_ssl and not ssl_support:
             debug(f"Failed: cause {ssl_support=}", verbose=verbose)
             continue
-
 
         protocols[protocol] = res
         timeout += res["timeout"]
@@ -171,7 +170,8 @@ def check(proxy, in_check_protocols: list, verbose, force_ssl):
         proxy_address = json.loads(r)["origin"]
     except:
         l = [i.split(" = ") for i in r.split("\n") if not i == ""]
-        proxy_address = {l[i][0]: l[i][1] for i in range(0, len(l), 2)}["REMOTE_ADDR"]
+        proxy_address = {l[i][0]: l[i][1]
+                         for i in range(0, len(l), 2)}["REMOTE_ADDR"]
 
     return {
         "proxy_address": proxy_address,
@@ -207,6 +207,26 @@ def generate_proxychains(proxy=False, protocol=False):
         proxychains_file.close()
 
 
+def get_proxy(num, verbose, force_ssl):
+    url = "https://www.spys.me/proxy.txt"
+    debug(f"{url=}", verbose)
+    res = send_requests(url=url)
+    if res:
+        r = [i.split(" ")[0] for i in res["response"].split("\n")[9:-2]]
+        return r[:num]
+    else:
+        print("%sCannot get a proxy list!\nExiting..." % red)
+        exit(0)
+
+
+def good_proxy(current_proxy, infos, output_file, generate_proxychains_file):
+    print("%s%s : %s" % (green, current_proxy, infos))
+    if current_proxy not in open(output_file, "r").read():
+        open(output_file, "a").write("%s : %s\n" % (current_proxy, infos))
+        if generate_proxychains_file:
+            generate_proxychains(current_proxy, random.choice(
+                ["socks5" if "socks5" in infos["protocols"] else "socks4" if "socks4" in infos["protocols"] else infos["protocols"]])[0])
+
 
 def print_help():
     print(
@@ -218,13 +238,16 @@ def print_help():
         "  -o, --outfile     filename : write the good proxies and there info to the file (default: working_proxies.txt)\n"
         "  --protocols                : choose the right protocol for this proxies (default: http, socks4, socks5)\n"
         "  --force-ssl                : force ssl support as codition to accept any proxy\n"
-        "  --gen-proxychains          : generate proxychains.conf for proxychains binary (see https://github.com/haad/proxychains)"
+        "  --gen-proxychains          : generate proxychains.conf for proxychains binary (see https://github.com/haad/proxychains)\n"
+        "  --double-check             : recheck any good proxy as second time to trust on him ;)\n"
+        "  --get-proxies       number : get a proxy list with a number size and check them (the source is https://spys.me/proxies.txt)"
         % (blue, argv[0])
     )
     exit(0)
 
 
-arguments = ["-h", "--help", "-v", "--verbose", "-o", "--output", "-p", "--proxy", "-f", "--proxyfile", "--protocols", "--force-ssl", "--gen-proxychains"]
+arguments = ["-h", "--help", "-v", "--verbose", "-o", "--output", "-p", "--proxy", "-f",
+             "--proxyfile", "--protocols", "--force-ssl", "--gen-proxychains", "--double-check", "--get-proxies"]
 
 verbose = False
 check_proxies_line = False
@@ -233,12 +256,15 @@ force_ssl_suport = False
 generate_proxychains_file = False
 output_file = "working_proxies.txt"
 in_check_protocols = ["http", "socks4", "socks5"]
+good_proxies = []
+double_check = False
+get_proxies = False
 
 
 if len(argv) <= 1:
     print_help()
 
-signal.signal(signal.SIGINT, lambda s,f: exit(0))
+signal.signal(signal.SIGINT, lambda s, f: exit(0))
 
 arg_index = 1
 while arg_index < len(argv):
@@ -262,7 +288,8 @@ while arg_index < len(argv):
         elif argv[arg_index] == arguments[10]:
             in_check_protocols = argv[arg_index+1].split(",")
             for c in in_check_protocols:
-                if c == "": continue
+                if c == "":
+                    continue
                 if c not in ["http", "socks4", "socks5"]:
                     print("%sUnknow protocol: %s\n"
                           "list of proxies protocol: http, socks4, socks5"
@@ -273,6 +300,13 @@ while arg_index < len(argv):
             force_ssl_suport = True
         elif argv[arg_index] == arguments[12]:
             generate_proxychains_file = True
+        elif argv[arg_index] == arguments[13]:
+            double_check = True
+            debug(f"{double_check=}", verbose)
+        elif argv[arg_index] == arguments[14]:
+            get_proxies = True
+            proxies_size = int(argv[arg_index+1])
+            arg_index += 1
         arg_index += 1
     else:
         print("%s%s %s is unknown!\n"
@@ -287,33 +321,70 @@ if generate_proxychains_file:
     debug(f"{generate_proxychains_file=}", verbose=verbose)
     generate_proxychains()
 
+if get_proxies:
+    debug(f"{get_proxies=}", verbose)
+    proxies = get_proxy(proxies_size, verbose, force_ssl_suport)
+    for current_proxy in proxies:
+        if current_proxy == "":
+            continue
+        print("%sChecking %s proxy!" % (blue, current_proxy))
+        infos = check(current_proxy, in_check_protocols,
+                      verbose=verbose, force_ssl=force_ssl_suport)
+        if infos:
+            if double_check:
+                infos = check(current_proxy, in_check_protocols,
+                              verbose=verbose, force_ssl=force_ssl_suport)
+                if infos:
+                    good_proxy(current_proxy, infos, output_file,
+                               generate_proxychains_file)
+                else:
+                    print("%sProxy %s is not working!" % (red, current_proxy))
+            else:
+                good_proxy(current_proxy, infos, output_file,
+                           generate_proxychains_file)
+        else:
+            print("%sProxy %s is not working!" % (red, current_proxy))
+
 if check_proxies_line:
     for current_proxy in proxies:
-        if current_proxy == "": continue
+        if current_proxy == "":
+            continue
         print("%sChecking %s proxy!" % (blue, current_proxy))
-        infos = check(current_proxy, in_check_protocols, verbose=verbose, force_ssl=force_ssl_suport)
+        infos = check(current_proxy, in_check_protocols,
+                      verbose=verbose, force_ssl=force_ssl_suport)
         if infos:
-            print("%s%s : %s" % (green, current_proxy, infos))
-            if current_proxy not in open(output_file, "r").read():
-                open(output_file, "a").write("%s : %s\n" % (current_proxy, infos))
-                if generate_proxychains_file:
-                    generate_proxychains(current_proxy, random.choice(
-                        ["socks5" if "socks5" in infos["protocols"] else "socks4" if "socks4" in infos["protocols"] else infos["protocols"]])[0])
+            if double_check:
+                infos = check(current_proxy, in_check_protocols,
+                              verbose=verbose, force_ssl=force_ssl_suport)
+                if infos:
+                    good_proxy(current_proxy, infos, output_file,
+                               generate_proxychains_file)
+                else:
+                    print("%sProxy %s is not working!" % (red, current_proxy))
+            else:
+                good_proxy(current_proxy, infos, output_file,
+                           generate_proxychains_file)
         else:
             print("%sProxy %s is not working!" % (red, current_proxy))
 
 if check_proxies_file:
     for current_proxy in [i.rstrip() for i in open(proxies_file, "r").readlines()]:
         print("%sChecking %s proxy!" % (blue, current_proxy))
-        if current_proxy == "": continue
-        infos = check(current_proxy, in_check_protocols, verbose=verbose, force_ssl=force_ssl_suport)
+        if current_proxy == "":
+            continue
+        infos = check(current_proxy, in_check_protocols,
+                      verbose=verbose, force_ssl=force_ssl_suport)
         if infos:
-            print("%s%s : %s" % (green, current_proxy, infos))
-            if current_proxy not in open(output_file, "r").read():
-                open(output_file, "a").write("%s : %s\n" % (current_proxy, infos))
-                if generate_proxychains_file:
-                    generate_proxychains(current_proxy, random.choice(
-                        ["socks5" if "socks5" in infos["protocols"] else "socks4" if "socks4" in infos["protocols"] else infos["protocols"]])[0])
+            if double_check:
+                infos = check(current_proxy, in_check_protocols,
+                              verbose=verbose, force_ssl=force_ssl_suport)
+                if infos:
+                    good_proxy(current_proxy, infos, output_file,
+                               generate_proxychains_file)
+                else:
+                    print("%sProxy %s is not working!" % (red, current_proxy))
+            else:
+                good_proxy(current_proxy, infos, output_file,
+                           generate_proxychains_file)
         else:
             print("%sProxy %s is not working!" % (red, current_proxy))
-
